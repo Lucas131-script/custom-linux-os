@@ -1,0 +1,33 @@
+name: Build Arch ISO
+on: 
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Create Output Directory
+        run: mkdir -p ${{ github.workspace }}/out
+
+      - name: Compile ISO inside Arch Container
+        run: |
+          docker run --privileged \
+            -v ${{ github.workspace }}/out:/output \
+            archlinux:latest \
+            bash -c "
+              pacman -Syu --noconfirm archiso &&
+              cp -r /usr/share/archiso/configs/releng/ /tmp/profile &&
+              echo -e 'plasma-desktop\nwayland\nsddm\nflatpak\nfirefox\ntimeshift' >> /tmp/profile/packages.x86_64 &&
+              mkarchiso -v -w /tmp/work -o /output /tmp/profile
+            "
+
+      - name: Upload Finished ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: custom-linux-iso
+          path: ${{ github.workspace }}/out/*.iso
+          retention-days: 5
