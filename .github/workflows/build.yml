@@ -6,6 +6,8 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    timeout-minutes: 20 # Hard stop to prevent another 2-hour hang
+    
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -13,12 +15,14 @@ jobs:
       - name: Create Output Directory
         run: mkdir -p ${{ github.workspace }}/out
 
-      - name: Compile ISO inside Arch Container
+      - name: Compile ISO with Host Hardware Access
         run: |
           docker run --privileged \
+            -v /dev:/dev \
             -v ${{ github.workspace }}/out:/output \
             archlinux:latest \
             bash -c "
+              pacman -Sy --noconfirm archlinux-keyring &&
               pacman -Syu --noconfirm archiso &&
               cp -r /usr/share/archiso/configs/releng/ /tmp/profile &&
               echo -e 'plasma-desktop\nwayland\nsddm\nflatpak\nfirefox\ntimeshift' >> /tmp/profile/packages.x86_64 &&
@@ -30,4 +34,4 @@ jobs:
         with:
           name: custom-linux-iso
           path: ${{ github.workspace }}/out/*.iso
-          retention-days: 5
+          retention-days: 1
